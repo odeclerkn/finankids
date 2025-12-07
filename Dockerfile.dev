@@ -1,0 +1,42 @@
+# ===================================
+# FinanKids - Dockerfile para Desarrollo
+# ===================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies needed for development
+RUN apk add --no-cache libc6-compat git curl bash
+
+# Set environment variables
+ENV NODE_ENV development
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Copy package files first (for better caching)
+COPY package.json package-lock.json* ./
+
+# Install ALL dependencies
+RUN npm install
+
+# Copy Convex config to generate types
+COPY convex/ ./convex/
+
+# Generate Convex types (needed for build)
+RUN npx convex codegen --init || true
+
+# Copy the rest of the application
+COPY . .
+
+# Copy and set permissions for entrypoint
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Expose port
+EXPOSE 3000
+
+# Use entrypoint for initialization
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Default command
+CMD ["npm", "run", "dev"]

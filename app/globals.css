@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 251, 235;
+  --background-end-rgb: 254, 243, 199;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  min-height: 100vh;
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-kid-purple via-kid-pink to-kid-yellow;
+  }
+
+  .card-kid {
+    @apply bg-white rounded-3xl shadow-lg border-4 border-white hover:border-kid-yellow transition-all duration-300;
+  }
+
+  .btn-kid {
+    @apply px-6 py-3 rounded-full font-display font-bold text-white shadow-lg transform hover:scale-105 transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply btn-kid bg-gradient-to-r from-kid-purple to-kid-pink hover:from-kid-pink hover:to-kid-purple;
+  }
+
+  .btn-secondary {
+    @apply btn-kid bg-gradient-to-r from-kid-blue to-kid-green hover:from-kid-green hover:to-kid-blue;
+  }
+}
+
+/* Animaciones para elementos interactivos */
+@keyframes coin-spin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.coin-spin {
+  animation: coin-spin 2s linear infinite;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fef3c7;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #8b5cf6, #ec4899);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #7c3aed, #db2777);
+}
