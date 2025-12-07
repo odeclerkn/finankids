@@ -116,38 +116,6 @@ export const getByCategory = query({
   },
 })
 
-// Búsqueda vectorial para RAG
-export const searchByVector = query({
-  args: {
-    embedding: v.array(v.float64()),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const results = await ctx.db
-      .query('knowledgeBase')
-      .withIndex('by_embedding', (q) => q.vector(args.embedding, args.limit ?? 5))
-      .collect()
-
-    return results
-  },
-})
-
-// Búsqueda vectorial con filtros (internal para action)
-export const searchByVectorInternal = internalQuery({
-  args: {
-    embedding: v.array(v.float64()),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const results = await ctx.db
-      .query('knowledgeBase')
-      .withIndex('by_embedding', (q) => q.vector(args.embedding, args.limit ?? 5))
-      .collect()
-
-    return results
-  },
-})
-
 // Obtener todo el conocimiento
 export const getAll = query({
   args: {
@@ -287,28 +255,43 @@ export const searchRAG = action({
     limit: v.optional(v.number()),
     ageFilter: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Array<{
+    id: string
+    title: string
+    content: string
+    category: string
+    difficulty: string
+    ageRange: { min: number; max: number }
+  }>> => {
     // 1. Generar embedding de la consulta
     const queryEmbedding = await generateEmbeddingFromOpenRouter(args.query)
 
-    // 2. Buscar documentos similares
-    const results = await ctx.runQuery(internal.knowledge.searchByVectorInternal, {
-      embedding: queryEmbedding,
-      limit: (args.limit ?? 5) * 2, // Traer más para filtrar
+    // 2. Buscar documentos similares usando vectorSearch (solo disponible en actions)
+    const searchResults = await ctx.vectorSearch('knowledgeBase', 'by_embedding', {
+      vector: queryEmbedding,
+      limit: (args.limit ?? 5) * 2, // Traer más para filtrar después
     })
 
-    // 3. Filtrar por edad si se especifica
-    let filteredResults = results
+    // 3. Obtener los documentos completos
+    const docs = await Promise.all(
+      searchResults.map(async (result) => {
+        const doc = await ctx.runQuery(internal.knowledge.getByIdInternal, { id: result._id })
+        return doc
+      })
+    )
+
+    // 4. Filtrar documentos nulos y por edad si se especifica
+    let filteredResults = docs.filter((doc): doc is NonNullable<typeof doc> => doc !== null)
     if (args.ageFilter) {
-      filteredResults = results.filter(
+      filteredResults = filteredResults.filter(
         (doc) => doc.ageRange.min <= args.ageFilter! && doc.ageRange.max >= args.ageFilter!
       )
     }
 
-    // 4. Tomar solo los necesarios
+    // 5. Tomar solo los necesarios
     const finalResults = filteredResults.slice(0, args.limit ?? 5)
 
-    // 5. Formatear respuesta
+    // 6. Formatear respuesta
     return finalResults.map((doc) => ({
       id: doc._id,
       title: doc.title,
